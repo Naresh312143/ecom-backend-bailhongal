@@ -67,6 +67,41 @@ const addToCart = async (req, res, next) => {
   }
 };
 
+// Get cart
+const getCart = async (req, res, next) => {
+  try {
+    // Get userId from request
+    const userId = req.user._id;
+
+    // Find the cart for the user and populate product details with title, price, and image
+    let cart = await Cart.findOne({ userId }).populate(
+      "products.productId",
+      "title price image"
+    );
+
+    // If cart does not exist, create a new one
+    if (!cart) {
+      cart = new Cart({
+        userId,
+        products: [],
+        totalPrice: 0,
+      });
+      await cart.save();
+    }
+
+    // Return the cart
+    res.status(200).json({
+      success: true,
+      cart,
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({
+      message: "Something went wrong",
+    });
+  }
+};
+
 // Helper to calculate total price
 async function calculateTotalPrice(products) {
   let total = 0;
