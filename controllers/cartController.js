@@ -136,6 +136,120 @@ const clearCart = async (req, res, next) => {
   }
 };
 
+const updateQuantity = async (req, res) => {
+  try {
+    // Get userId and productId from request
+    const userId = req.user._id;
+    const { productId, quantity } = req.body;
+
+    // Validate productId and quantity
+    if (!productId || !quantity || quantity <= 1) {
+      return res.status(400).json({
+        message: "Invalid productId or quantity",
+      });
+    }
+
+    // Find the cart for the user
+    const cart = await Cart.findOne({ userId });
+
+    // If cart does not exist, return a message
+    if (!cart) {
+      return res.status(404).json({
+        message: "Cart not found",
+      });
+    }
+
+    // Find the product in the cart
+    const prodIndex = cart.products.findIndex(
+      (item) => item.productId.toString() === productId
+    );
+
+    // If product is not found in the cart, return a message
+    if (prodIndex === -1) {
+      return res.status(404).json({
+        message: "Product not found in cart",
+      });
+    }
+
+    // Update the quantity of the product
+    cart.products[prodIndex].quantity = quantity;
+
+    // Recalculate total price
+    cart.totalPrice = await calculateTotalPrice(cart.products);
+
+    // Save the updated cart
+    await cart.save();
+
+    // Return the updated cart
+    res.status(200).json({
+      success: true,
+      cart,
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({
+      message: "Something went wrong",
+    });
+  }
+};
+
+// Remove product from cart
+const removeFromCart = async (req, res) => {
+  try {
+    // Get userId and productId from request
+    const userId = req.user._id;
+    const { productId } = req.body;
+
+    // Validate productId
+    if (!productId) {
+      return res.status(400).json({
+        message: "Invalid productId",
+      });
+    }
+
+    // Find the cart for the user
+    const cart = await Cart.findOne({ userId });
+
+    // If cart does not exist, return a message
+    if (!cart) {
+      return res.status(404).json({
+        message: "Cart not found",
+      });
+    }
+
+    // Find the product in the cart
+    const prodIndex = cart.products.findIndex(
+      (item) => item.productId.toString() === productId
+    );
+
+    // If product is not found in the cart, return a message
+    if (prodIndex === -1) {
+      return res.status(404).json({
+        message: "Product not found in cart",
+      });
+    }
+
+    // // Remove the product from the cart
+    cart.products.splice(prodIndex, 1);
+    // Recalculate total price
+    cart.totalPrice = await calculateTotalPrice(cart.products);
+
+    // Save the updated cart
+    await cart.save();
+
+    // Return the updated cart
+    res.status(200).json({
+      success: true,
+      cart,
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).json({
+      message: "Something went wrong",
+    });
+  }
+};
+
 // Helper to calculate total price
 async function calculateTotalPrice(products) {
   let total = 0;
@@ -150,3 +264,11 @@ async function calculateTotalPrice(products) {
   }
   return total;
 }
+
+module.exports = {
+  addToCart,
+  getCart,
+  clearCart,
+  updateQuantity,
+  removeFromCart,
+};
